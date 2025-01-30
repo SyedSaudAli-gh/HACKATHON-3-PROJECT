@@ -9,6 +9,8 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import Link from "next/link";
+import { auth } from "@/firebase/firebase"; // Import Firebase Auth
+import { User } from "firebase/auth"; // Import Firebase User type
 
 interface AddToCardSliderProps {
   name: string;
@@ -24,6 +26,15 @@ function AddToCardSlider({
   quantity,
 }: AddToCardSliderProps) {
   const [cartItems, setCartItems] = useState<AddToCardSliderProps[]>([]);
+  const [user, setUser] = useState<User | null>(null); // Firebase User type for user state
+
+  // Track Firebase Auth State
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+      setUser(currentUser); // Update user state
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Load cart items from localStorage when the component mounts
   useEffect(() => {
@@ -52,8 +63,14 @@ function AddToCardSlider({
     });
   }
 
-  // Handle add to cart with quantity update
+  // Handle add to cart with login check
   function handleAddToCart() {
+    if (!user) {
+      // If user is not logged in, show an alert or redirect to login
+      alert("Please login or signup to add items to your cart.");
+      return;
+    }
+
     const itemIndex = cartItems.findIndex(
       (item) => item.name === name && item.image === image
     );
@@ -76,7 +93,6 @@ function AddToCardSlider({
     }
   }
 
-
   // Dynamically calculate subtotal
   const subtotal = cartItems.reduce(
     (total, item) => total + item.price * item.quantity,
@@ -86,29 +102,29 @@ function AddToCardSlider({
   return (
     <Sheet>
       <SheetTrigger
-        className="w-full md:w-[215px] h-[64px] border-[1px] rounded-[10px] flex justify-center items-center hover:border-2 border-black"
+        className="px-1 sm:px-1 md:px-9 h-[64px] border-[1px] rounded-[10px] flex justify-center items-center hover:border-2 border-black"
         onClick={handleAddToCart} // Adding or updating product on click
       >
         Add to Cart
       </SheetTrigger>
       <SheetContent>
-        <SheetHeader className="w-auto h-auto ">
-          <SheetTitle className="w-auto poppins font-semibold  text-[24px]">
+        <SheetHeader className="w-auto">
+          <SheetTitle className="w-auto poppins font-semibold text-[24px]">
             Shopping Cart
           </SheetTitle>
-          <hr className="w-[287px] border-[1px] border-[#D9D9D9] " />
-          <div className="space-y-4 mt-4">
+          <hr className="w-[287px] border-[1px] border-[#D9D9D9]" />
+          <div className="space-y-4 mt-4 h-[500px] overflow-y-auto">
             {cartItems.map((item, index) => (
               <SheetDescription
                 key={index}
-                className="flex justify-between items-center gap-4 poppins my-5 mb-10 "
+                className="flex justify-between items-center gap-4 poppins my-5 mb-10"
               >
                 <Image
                   src={item.image}
-                  width={105}
-                  height={105}
+                  width={999}
+                  height={999}
                   alt="Product Image"
-                  className="rounded-lg"
+                  className="rounded-lg w-[105px] h-[80px] object-contain"
                 />
                 <div className="flex flex-col items-start gap-2 text-base text-black truncate">
                   <h1>{item.name}</h1>
@@ -129,7 +145,7 @@ function AddToCardSlider({
               </SheetDescription>
             ))}
           </div>
-          <SheetDescription className="w-auto flex justify-between gap-32 poppins text-base text-black mt-4">
+          <SheetDescription className="w-auto flex justify-between gap-32 poppins text-base text-black">
             <span>Subtotal</span>
             <span className="text-[#B88E2F]">
               Rs. {subtotal.toLocaleString()}

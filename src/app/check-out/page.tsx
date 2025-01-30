@@ -1,73 +1,182 @@
 "use client";
-import React from "react";
-import Image from "next/image";
-import Link from "next/link";
-import { useState } from "react";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
+import React, { useEffect, useState } from "react";
+import { v4 as uuidv4 } from "uuid";
 import ReturnPolicy from "@/components/returnPolicy";
+import { ProductTypes } from "@/type/productTypes";
+import { CustomerTypes } from "@/type/customer";
+import { client } from "@/sanity/lib/client";
+import HeaderDesign from "@/components/HeaderDesign";
+import { auth } from "@/firebase/firebase"; // Import Firebase Auth
+import { User } from "firebase/auth"; // Import Firebase User type
+import { useRouter } from "next/navigation"; // Use next/navigation instead of next/router
 
-function CheckOut() {
-  const [selectedMethod, setSelectedMethod] = useState<string>(""); // State for selected payment method
+const CreateCustomerInSanity = async (customerInfo: CustomerTypes) => {
+  try {
+    const customerObject = {
+      _type: "customer",
+      firstName: customerInfo.firstName,
+      lastName: customerInfo.lastName,
+      address: customerInfo.address,
+      city: customerInfo.city,
+      phone: customerInfo.phone,
+      email: customerInfo.email,
+    };
+    
+    const response = await client.create(customerObject);
+    console.log("Customer created:", response);
+    return response;
+  } catch (error) {
+    console.error("Error creating customer in Sanity:", error);
+    throw error;
+  }
+};
 
-  const handlePaymentChange = (method: string) => {
-    setSelectedMethod(method); // Update selected method
+const CreateOrderInSanity = async (
+  cartData: ProductTypes[],
+  customer_id: string
+) => {
+  try {
+    const orderObject = {
+      _type: "order",
+      customer: {
+        _type: "reference",
+        _ref: customer_id,
+      },
+      items: cartData.map((item: ProductTypes) => ({
+        _key: uuidv4(), // Har item ke liye ek unique key generate karein
+        product: {
+          _type: "reference",
+          _ref: item._id,
+        },
+        quantity: item.stockLevel || 1,
+        price: item.price,
+      })),
+      order_date: new Date().toISOString(),
+      total_amount: cartData.reduce(
+        (total, item) => total + item.price * (item.stockLevel || 1),
+        0
+      ),
+    };
+    
+
+    const response = await client.create(orderObject);
+    console.log("Order created:", response);
+    return response;
+  } catch (error) {
+    console.error("Error creating order in Sanity:", error);
+    throw error;
+  }
+};
+
+const CheckOut = () => {
+  const [cartItems, setCartItems] = useState<ProductTypes[]>([]);
+  const [selectedMethod, setSelectedMethod] = useState<string>("");
+  const [customerInfo, setCustomerInfo] = useState<CustomerTypes>({
+    firstName: "",
+    lastName: "",
+    address: "",
+    city: "",
+    phone: "",
+    email: "",
+  });
+  const [user, setUser] = useState<User | null>(null); // State to hold the user object
+  const router = useRouter(); // Initialize useRouter from next/navigation
+
+  // Check if the user is logged in
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
+        setUser(user);
+      } else {
+        // Redirect to login page if the user is not logged in
+        router.push("/login");
+      }
+    });
+
+    return () => unsubscribe(); // Cleanup subscription on unmount
+  }, [router]);
+
+  // Fetch cart items from localStorage
+  useEffect(() => {
+    const savedCart = localStorage.getItem("cartItems");
+    if (savedCart) {
+      setCartItems(JSON.parse(savedCart));
+    }
+  }, []);
+
+  // Calculate subtotal
+  const subtotal = cartItems.reduce(
+    (total, item) => total + item.price * (item.quantity || 1), // Default to 1 if quantity is missing
+    0
+  );
+
+  // Validate required fields
+  const validateFields = () => {
+    const requiredFields: (keyof CustomerTypes)[] = [
+      "firstName",
+      "lastName",
+      "address",
+      "city",
+      "phone",
+      "email",
+    ];
+
+    for (let field of requiredFields) {
+      if (!customerInfo[field]) {
+        alert(`Please fill in the ${field}`);
+        return false;
+      }
+    }
+    return true;
   };
+
+  // Handle checkout process
+  const handleCheckOut = async () => {
+    if (validateFields()) {
+      try {
+        const customer = await CreateCustomerInSanity(customerInfo);
+        await CreateOrderInSanity(cartItems, customer._id);
+        alert("Order placed successfully!");
+        console.log("Checkout completed successfully.");
+        localStorage.removeItem("cartItems"); // Clear the cart after successful checkout
+        router.push("/thank-you"); // Redirect to a thank-you page
+      } catch (error) {
+        console.error("Error during checkout:", error);
+        alert("An error occurred during checkout. Please try again.");
+      }
+    }
+  };
+
+  // Handle input field changes
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setCustomerInfo({ ...customerInfo, [name]: value });
+  };
+
+  // Handle payment method selection
+  const handlePaymentChange = (method: string) => {
+    setSelectedMethod(method);
+  };
+
+  // If the user is not logged in, show a message
+  if (!user) {
+    return (
+      <div className="w-full min-h-screen flex justify-center items-center">
+        <p>Please log in to proceed to checkout.</p>
+      </div>
+    );
+  }
+
   return (
     <>
-      <div className="w-full h-[316px] relative flex flex-col items-center">
-        <Image
-          src="/shop.jpeg"
-          alt="shop-entry"
-          width={1440}
-          height={450}
-          className="object-cover w-full h-full blur-[2px] opacity-50"
-        />
+      <HeaderDesign
+        title="Checkout"
+        breadcrumbs={[
+          { name: "Home", href: "/" },
+          { name: "Checkout", href: "/check-out" },
+        ]}
+      />
 
-        <div className="absolute top-1/2 transform -translate-y-1/2 flex flex-col justify-center items-center gap-3 px-4">
-          <div className="w-[60px] h-[60px] sm:w-[77px] sm:h-[77px]">
-            <Image
-              src="/shop-logo.png"
-              alt="shop-entry"
-              width={1000}
-              height={1000}
-              className="object-contain"
-            />
-          </div>
-
-          <h1 className="poppins font-medium text-[28px] sm:text-[36px] md:text-[48px] -mt-2">
-            Checkout
-          </h1>
-
-          <Breadcrumb>
-            <BreadcrumbList className="flex gap-2 text-center">
-              <BreadcrumbItem>
-                <BreadcrumbLink
-                  href="/"
-                  className="poppins font-medium text-[14px] sm:text-[16px] text-black"
-                >
-                  Home
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator className="text-black text-[14px] sm:text-[16px]" />
-              <BreadcrumbItem>
-                <BreadcrumbLink
-                  href="/shop"
-                  className="poppins text-[14px] sm:text-[16px] text-gray-700"
-                >
-                  Checkout
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-        </div>
-      </div>
-      {/* body */}
       <div className="w-full min-h-screen flex justify-center items-center p-4 poppins">
         <div className="w-full max-w-[1242px] flex flex-col lg:flex-row gap-10">
           {/* Billing Details Section */}
@@ -77,19 +186,26 @@ function CheckOut() {
                 Billing details
               </h1>
 
+              {/* Billing Fields */}
               <div className="flex flex-col md:flex-row gap-6">
                 <div className="flex flex-col gap-3">
                   <label className="font-medium">First Name</label>
                   <input
+                    name="firstName"
                     className="w-full md:w-[211px] h-[50px] md:h-[75px] rounded-[10px] border border-[#9F9F9F] px-5"
                     type="text"
+                    onChange={handleInputChange}
+                    value={customerInfo.firstName}
                   />
                 </div>
                 <div className="flex flex-col gap-3">
                   <label className="font-medium">Last Name</label>
                   <input
+                    name="lastName"
                     className="w-full md:w-[211px] h-[50px] md:h-[75px] rounded-[10px] border border-[#9F9F9F] px-5"
                     type="text"
+                    onChange={handleInputChange}
+                    value={customerInfo.lastName}
                   />
                 </div>
               </div>
@@ -111,14 +227,20 @@ function CheckOut() {
 
               <label className="font-medium">Street address</label>
               <input
+                name="address"
                 className="w-full h-[50px] md:h-[75px] rounded-[10px] px-5 border border-[#9F9F9F]"
                 type="text"
+                onChange={handleInputChange}
+                value={customerInfo.address}
               />
 
               <label className="font-medium">Town / City</label>
               <input
+                name="city"
                 className="w-full h-[50px] md:h-[75px] rounded-[10px] px-5 border border-[#9F9F9F]"
                 type="text"
+                onChange={handleInputChange}
+                value={customerInfo.city}
               />
 
               <label className="font-medium">Province</label>
@@ -138,14 +260,20 @@ function CheckOut() {
 
               <label className="font-medium">Phone</label>
               <input
+                name="phone"
                 className="w-full h-[50px] md:h-[75px] rounded-[10px] px-5 border border-[#9F9F9F]"
                 type="tel"
+                onChange={handleInputChange}
+                value={customerInfo.phone}
               />
 
               <label className="font-medium">Email address</label>
               <input
+                name="email"
                 className="w-full h-[50px] md:h-[75px] rounded-[10px] px-5 border border-[#9F9F9F]"
                 type="email"
+                onChange={handleInputChange}
+                value={customerInfo.email}
               />
 
               <input
@@ -164,15 +292,19 @@ function CheckOut() {
                 <h1>Subtotal</h1>
               </div>
 
-              <div className="flex justify-between">
-                <span className="text-[#9F9F9F]">Asgaard sofa</span>
-                <span className="font-light">Rs. 250,000.00</span>
-              </div>
+              {cartItems.map((item, index) => (
+                <div key={index} className="flex justify-between">
+                  <span className="text-[#9F9F9F]">{item.name}</span>
+                  <span className="font-light">
+                    Rs. {(item.price * (item.quantity || 1)).toLocaleString()}
+                  </span>
+                </div>
+              ))}
 
               <div className="flex justify-between">
                 <span>Total</span>
                 <span className="font-bold text-[#B88E2F] text-[24px]">
-                  Rs. 250,000.00
+                  Rs. {subtotal.toLocaleString()}
                 </span>
               </div>
 
@@ -215,7 +347,10 @@ function CheckOut() {
                 )}
               </div>
 
-              <button className="w-full h-[64px] border border-black rounded-[15px] text-[20px]">
+              <button
+                onClick={handleCheckOut}
+                className="w-full h-[64px] border border-black rounded-[15px] text-[20px]"
+              >
                 Place order
               </button>
             </div>
@@ -226,6 +361,6 @@ function CheckOut() {
       <ReturnPolicy />
     </>
   );
-}
+};
 
 export default CheckOut;

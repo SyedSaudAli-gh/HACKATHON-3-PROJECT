@@ -1,67 +1,21 @@
 import React from "react";
 import Image from "next/image";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-
 import { CiSearch } from "react-icons/ci";
 import ReturnPolicy from "@/components/returnPolicy";
 import PaginationPage from "@/components/pagination";
+import HeaderDesign from "@/components/HeaderDesign";
 
 function About() {
   return (
     <>
-      <div className="w-full h-[316px] relative flex flex-col items-center">
-        <Image
-          src="/shop.jpeg"
-          alt="shop-entry"
-          width={1440}
-          height={450}
-          className="object-cover w-full h-full blur-[2px] opacity-50"
-        />
+      <HeaderDesign
+        title="Blog"
+        breadcrumbs={[
+          { name: "Home", href: "/" },
+          { name: "Blog", href: "/blog" },
+        ]}
+      />
 
-        <div className="absolute top-1/2 transform -translate-y-1/2 flex flex-col justify-center items-center gap-3 px-4">
-          <div className="w-[60px] h-[60px] sm:w-[77px] sm:h-[77px]">
-            <Image
-              src="/shop-logo.png"
-              alt="shop-entry"
-              width={1000}
-              height={1000}
-              className="object-contain"
-            />
-          </div>
-
-          <h1 className="poppins font-medium text-[28px] sm:text-[36px] md:text-[48px] -mt-2">
-            Blog
-          </h1>
-
-          <Breadcrumb>
-            <BreadcrumbList className="flex gap-2 text-center">
-              <BreadcrumbItem>
-                <BreadcrumbLink
-                  href="/"
-                  className="poppins font-medium text-[14px] sm:text-[16px] text-black"
-                >
-                  Home
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator className="text-black text-[14px] sm:text-[16px]" />
-              <BreadcrumbItem>
-                <BreadcrumbLink
-                  href="/about"
-                  className="poppins text-[14px] sm:text-[16px] text-gray-700"
-                >
-                  Blog
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-        </div>
-      </div>
       {/* body */}
       <div className="w-auto h-auto">
         <div className="w-auto h-auto flex justify-center gap-14 py-20 mx-10 flex-wrap ">
@@ -421,8 +375,7 @@ function About() {
         </div>
       </div>
 
-       
-<PaginationPage />
+      {/* <PaginationPage /> */}
       <ReturnPolicy />
     </>
   );

@@ -3,31 +3,10 @@ import { client } from "@/sanity/lib/client";
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
-
-interface DataProducts {
-  productName: string;
-  slug: { current: string };
-  price: number;
-  images: {
-    asset: {
-      _id: string;
-      url: string;
-    };
-  }[];
-}
+import { ProductTypes } from "@/type/productTypes";
 
 const fetchRelatedProducts = async () => {
-  const productsQuery = `*[_type == "product"][2..5]{
-    productName, 
-    slug { current }, 
-    price, 
-    images[] {
-      asset->{
-        _id,
-        url
-      }
-    }
-  }`;
+  const productsQuery = `*[_type == "product"][2..5]`;
 
   try {
     const data = await client.fetch(productsQuery);
@@ -39,7 +18,7 @@ const fetchRelatedProducts = async () => {
 };
 
 const RelatedProducts = () => {
-  const [dataProducts, setDataProducts] = useState<DataProducts[]>([]);
+  const [dataProducts, setDataProducts] = useState<ProductTypes[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -68,25 +47,29 @@ const RelatedProducts = () => {
       <div className="w-full max-w-[1200px] mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         {dataProducts.map((product, index) => (
           <Link
-            href={`/product/${product.slug.current}`}
+            href={`/product/${product.id}`}
             key={index}
             className="bg-white hover:bg-slate-50 rounded-lg shadow-md p-4 flex flex-col items-center"
           >
             <Image
-              src={product.images[0]?.asset.url || "/placeholder.png"}
-              width={200}
-              height={200}
-              alt={product.productName}
-              className="rounded-lg pt-10 object-cover"
+              src={product.imagePath} // Use the plain URL directly
+              width={500}
+              height={500}
+              alt={product.name}
+              className="object-cover w-[500px] h-[300px] rounded-t-lg"
             />
 
-            <p className="poppins mt-auto">{product.productName}</p>
+            <p className="poppins mt-auto">{product.name}</p>
             <p className="poppins font-medium text-[24px]">
               Rs. {product.price}
             </p>
           </Link>
         ))}
       </div>
+      <h2 className="text-center mt-5 poppins font-medium text-[20px] sm:text-[24px]">
+        <Link href="/shop">View More</Link>
+      <p className="w-[121px] h-1 border-b-2 border-black mx-auto mt-2"></p>
+      </h2>
     </div>
   );
 };

@@ -6,7 +6,9 @@ const nextConfig = {
       "plus.unsplash.com",
       "images.unsplash.com",
       "next-ecommerce-template-4.vercel.app", 
+      "lh3.googleusercontent.com"
     ],
+    
   },
 };
 

@@ -27,9 +27,10 @@ function PaginationPage({ currentPage, onPageChange }: PaginationProps) {
           <PaginationContent className="flex justify-center sm:gap-4 md:gap-6 ">
             <PaginationItem>
               <PaginationPrevious
-                className="bg-[#FFF9E5] rounded-[10px] sm:px-6 sm:py-6 md:px-6 md:py-6 hover:bg-[#FBEBB5] hover:cursor-pointer"
+                className={`bg-[#FFF9E5] rounded-[10px] sm:px-6 sm:py-6 md:px-6 md:py-6 hover:bg-[#FBEBB5] hover:cursor-pointer ${
+                  currentPage === 1 ? "opacity-50 cursor-not-allowed" : ""
+                }`}
                 onClick={() => handlePageClick(currentPage - 1)}
-                disabled={currentPage === 1}
               />
             </PaginationItem>
 
@@ -50,9 +51,10 @@ function PaginationPage({ currentPage, onPageChange }: PaginationProps) {
 
             <PaginationItem>
               <PaginationNext
-                className="bg-[#FFF9E5] rounded-[10px] sm:px-6 sm:py-6 md:px-6 md:py-6 hover:bg-[#FBEBB5] hover:cursor-pointer"
+                className={`bg-[#FFF9E5] rounded-[10px] sm:px-6 sm:py-6 md:px-6 md:py-6 hover:bg-[#FBEBB5] hover:cursor-pointer ${
+                  currentPage === totalPages ? "opacity-50 cursor-not-allowed" : ""
+                }`}
                 onClick={() => handlePageClick(currentPage + 1)}
-                disabled={currentPage === totalPages}
               />
             </PaginationItem>
           </PaginationContent>
